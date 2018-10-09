@@ -4,20 +4,22 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+int max=0;
+
 void handle_child_process_output(char buffer[], ssize_t count) {
-	int max=0;
 	for(int i=1; i<count; i++) {
 		if(buffer[i-1]=='\n') {
-			printf("Start\n");
+			max=0;	
 			for(int j=i; j<count; j++) {
 				if(buffer[j]==':') break;
-				printf("buf: %c\n", buffer[j]);
 				max=max*10+(buffer[j]-'0');
 			}
-			printf("End\n");
 		}
 	}
-	printf("%d", max);
+}
+
+void fin() {
+	printf("%d\n", max);
 }
 
 int main() {
@@ -59,6 +61,7 @@ int main() {
 		handle_child_process_output(buffer, count);
 	  }
 	}
+	fin();
 	close(filedes[0]);
 	wait(0);
 }
