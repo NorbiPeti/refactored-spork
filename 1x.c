@@ -4,9 +4,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-int max=0;
-
-void handle_child_process_output(char buffer[], ssize_t count) {
+int handle_child_process_output(char buffer[], ssize_t count) {
+	int max;
 	for(int i=1; i<count; i++) {
 		if(buffer[i-1]=='\n') {
 			max=0;	
@@ -18,11 +17,7 @@ void handle_child_process_output(char buffer[], ssize_t count) {
 	}
 }
 
-void fin() {
-	printf("%d\n", max);
-}
-
-int main() {
+int crshrand() {
 	//system("./1"); //
 	//http://www.microhowto.info/howto/capture_the_output_of_a_child_process_in_c.html
 	int filedes[2];
@@ -46,6 +41,7 @@ int main() {
 	close(filedes[1]);
 
 	char buffer[4096];
+	int max=0;
 	while (1) {
 	  ssize_t count = read(filedes[0], buffer, sizeof(buffer));
 	  if (count == -1) {
@@ -58,11 +54,15 @@ int main() {
 	  } else if (count == 0) {
 		break;
 	  } else {
-		handle_child_process_output(buffer, count);
+		max=handle_child_process_output(buffer, count);
 	  }
 	}
-	fin();
 	close(filedes[0]);
 	wait(0);
+	return max;
+}
+
+int main() {
+	printf("%d\n", crshrand());
 }
 
