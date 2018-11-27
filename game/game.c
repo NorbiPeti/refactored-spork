@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <netinet/in.h>
 #include "getch.h"
 
 #define _STRINGIFY(s) #s
@@ -9,7 +12,10 @@
 
 #define SIZE_X 80
 #define SIZE_Y 24
-#define ENEMY_COUNT 100
+#define ENEMY_COUNT_MAX 1000
+#define ENEMY_COUNT_STEP 100
+
+#define PORT 1900
 
 typedef struct { int x, y; char pchar; } player_t;
 
@@ -19,11 +25,16 @@ player_t *player_at(int x, int y);
 void end();
 void move_enemies();
 
+int make_socket(uint16_t port);
+
 player_t *own;
-player_t enemies[ENEMY_COUNT];
+player_t enemies[ENEMY_COUNT_MAX];
 bool running=true;
+unsigned int enemyc=0;
 
 int main() {
+	int sock=make_socket(PORT);
+
 	printf("\033[0;0H");
 	srand(time(NULL));
 	for(int i=0; i<SIZE_Y; i++) {
@@ -38,13 +49,18 @@ int main() {
 	own=&p;
 	spawn_enemies();
 	player_move(own, 'W'); //Render player
+	int score=0;
 	do {
+		score++;
+		if(score%50==0 && enemyc<ENEMY_COUNT_MAX)
+			spawn_enemies();
+
 		input = getch(); //Don't wait for Enter key
 		move_enemies(); //Move on each keypress
 		if(player_move(own, input)) continue;
-		//if(sp(&own, input)) continue;
 	} while(input!=10 && running); //Enter
 	printf("\033["STRINGIFY(SIZE_Y)";0H\n"); //Reset prompt location
+	printf("Score: %d\n", score);
 	return 0;
 }
 
@@ -97,7 +113,7 @@ bool player_move(player_t *p, char dir) {
 
 player_t *player_at(int x, int y) {
 	if(own->x==x&&own->y==y) return own;
-	for(int i=0; i<ENEMY_COUNT; i++) {
+	for(int i=0; i<enemyc; i++) {
 		if(enemies[i].x==x&&enemies[i].y==y) return &enemies[i];
 	}
 	return NULL;
@@ -111,10 +127,11 @@ player_t get_enemy() {
 }
 
 void spawn_enemies() {
-	for(int i=0; i<ENEMY_COUNT; i++) {
+	for(int i=enemyc; i<enemyc+ENEMY_COUNT_STEP && i<ENEMY_COUNT_MAX; i++) {
 		enemies[i]=get_enemy();
 		print_char(&enemies[i], enemies[i].pchar);
 	}
+	enemyc+=ENEMY_COUNT_STEP;
 }
 
 void end() {
@@ -123,8 +140,36 @@ void end() {
 
 void move_enemies() {
 	char dir[] = { 'W', 'A', 'S', 'D' };
-	for(int i=0; i<ENEMY_COUNT; i++) {
+	for(int i=0; i<enemyc; i++) {
+		if(rand()%2) continue;
 		player_move(&enemies[i], dir[rand()%4]);
 	}
 }
 
+//--------------------------------------------------
+
+int make_socket(uint16_t port)
+{
+  int sock;
+  struct sockaddr_in name;
+
+  /* Create the socket. */
+  sock = socket (PF_INET, SOCK_STREAM, 0);
+  if (sock < 0)
+    {
+      perror ("socket");
+      exit (EXIT_FAILURE);
+    }
+
+  /* Give the socket a name. */
+  name.sin_family = AF_INET;
+  name.sin_port = htons (port);
+  name.sin_addr.s_addr = htonl (INADDR_ANY);
+  if (bind (sock, (struct sockaddr *) &name, sizeof (name)) < 0)
+    {
+      perror ("bind");
+      exit (EXIT_FAILURE);
+    }
+
+  return sock;
+}	
