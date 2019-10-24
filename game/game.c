@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include "getch.h"
+#include <stdarg.h>
 
 #define _STRINGIFY(s) #s
 #define STRINGIFY(s) _STRINGIFY(s)
@@ -17,13 +18,15 @@
 
 #define PORT 1900
 
-typedef struct { int x, y; char pchar; } player_t;
+typedef struct { int x, y; char pchar; bool o; } player_t;
 
 bool player_move(player_t *p, char dir);
+bool sp(player_t *p, char dir);
 void spawn_enemies();
 player_t *player_at(int x, int y);
 void end();
 void move_enemies();
+void debug(char* str, ...);
 
 int make_socket(uint16_t port);
 
@@ -58,6 +61,8 @@ int main() {
 		input = getch(); //Don't wait for Enter key
 		move_enemies(); //Move on each keypress
 		if(player_move(own, input)) continue;
+		if(sp(own, input)) continue;
+		debug("Input: %c", input);
 	} while(input!=10 && running); //Enter
 	printf("\033["STRINGIFY(SIZE_Y)";0H\n"); //Reset prompt location
 	printf("Score: %d\n", score);
@@ -66,6 +71,14 @@ int main() {
 
 void print_char(player_t *p, char c) {
 	printf("\033[%d;%dH%c\033[%d;%dH", p->y, p->x, c, p->y, p->x);
+}
+
+void debug(char* str, ...) {
+	va_list argp;
+	va_start(argp, str);
+	player_t *p = own;
+	vfprintf(stdout, "\033["STRINGIFY(SIZE_Y)";0H%s\033[%d;%dH", p->y, p->x, str, p->y, p->x);
+	va_end(argp);
 }
 
 bool player_move(player_t *p, char dir) {
@@ -104,12 +117,12 @@ bool player_move(player_t *p, char dir) {
 	return true;
 }
 
-/*bool sp(player_t *p, char but) {
+bool sp(player_t *p, char but) {
 	if(but!=' ') return false;
 	print_char(p, 'O');
 	p->o=true;
 	return true;
-}*/
+}
 
 player_t *player_at(int x, int y) {
 	if(own->x==x&&own->y==y) return own;
