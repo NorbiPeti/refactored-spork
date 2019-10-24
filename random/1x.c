@@ -15,6 +15,7 @@ int handle_child_process_output(char buffer[], ssize_t count) {
 			}
 		}
 	}
+	return max;
 }
 
 int crshrand() {
@@ -60,9 +61,5 @@ int crshrand() {
 	close(filedes[0]);
 	wait(0);
 	return max;
-}
-
-int main() {
-	printf("%d\n", crshrand());
 }
 
