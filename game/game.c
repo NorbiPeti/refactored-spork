@@ -54,13 +54,18 @@ int main() {
 	player_move(own, 'W'); //Render player
 	int score=0;
 	do {
-		score++;
-		if(score%50==0 && enemyc<ENEMY_COUNT_MAX)
+		if(score%50==1 && enemyc<ENEMY_COUNT_MAX) {
 			spawn_enemies();
+			score++; //Increment so it won't spawn forever if not moving
+		}
 
 		input = getch(); //Don't wait for Enter key
 		move_enemies(); //Move on each keypress
-		if(player_move(own, input)) continue;
+		debug("No input", input);
+		if(player_move(own, input)) {
+			score++; //Only increment the score if the player does something
+			continue;
+		}
 		if(sp(own, input)) continue;
 		debug("Input: %c", input);
 	} while(input!=10 && running); //Enter
@@ -70,14 +75,17 @@ int main() {
 }
 
 void print_char(player_t *p, char c) {
-	printf("\033[%d;%dH%c\033[%d;%dH", p->y, p->x, c, p->y, p->x);
+	printf("\033[%d;%dH%c\033[%d;%dH", p->y, p->x, c, own->y, own->x);
 }
 
 void debug(char* str, ...) {
 	va_list argp;
 	va_start(argp, str);
 	player_t *p = own;
-	vfprintf(stdout, "\033["STRINGIFY(SIZE_Y)";0H%s\033[%d;%dH", p->y, p->x, str, p->y, p->x);
+	const char* FORMAT_STR = "\033["STRINGIFY(SIZE_Y)";0H%s\t\033[%d;%dH";
+	char fstr[sizeof(str)+sizeof(FORMAT_STR)-2]; //-2: %s
+	vsprintf(fstr, str, argp);
+	printf(FORMAT_STR, fstr, p->y, p->x);
 	va_end(argp);
 }
 
